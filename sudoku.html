@@ -387,11 +387,15 @@
             .grid-container {
                 margin: 0 auto !important;
                 display: block !important;
+                width: fit-content !important;
                 page-break-inside: avoid !important;
             }
 
             .sudoku-grid {
                 background: white !important;
+                display: inline-grid !important;
+                grid-template-columns: repeat(9, auto) !important;
+                grid-auto-rows: auto !important;
             }
 
             .cell {
@@ -417,7 +421,7 @@
             }
 
             .pencilmarks {
-                display: none !important;
+                display: grid !important;
             }
 
             .modal {
