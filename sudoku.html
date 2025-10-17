@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Master</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .info {
+            display: flex;
+            gap: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .timer, .mistakes {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .mistakes.high {
+            color: #e74c3c;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            background: #667eea;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: #95a5a6;
+        }
+
+        button.danger {
+            background: #e74c3c;
+        }
+
+        button.success {
+            background: #27ae60;
+        }
+
+        .difficulty-selector {
+            margin-bottom: 20px;
+        }
+
+        .difficulty-selector label {
+            font-weight: bold;
+            margin-right: 10px;
+            color: #333;
+        }
+
+        .difficulty-selector select {
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .grid-container {
+            display: inline-block;
+            border: 3px solid #2c3e50;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .sudoku-grid {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 0;
+            background: #2c3e50;
+        }
+
+        .cell {
+            width: 55px;
+            height: 55px;
+            border: 1px solid #bdc3c7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            background: white;
+        }
+
+        .cell:hover:not(.given) {
+            background: #e8f4f8;
+        }
+
+        .cell.selected {
+            background: #bbdefb !important;
+            border: 2px solid #2196f3;
+        }
+
+        .cell.given {
+            background: white;
+            color: #2c3e50;
+            cursor: default;
+            font-weight: 900;
+        }
+
+        .cell.user-input {
+            color: #3498db;
+        }
+
+        .cell.solved {
+            color: #27ae60;
+        }
+
+        .cell.error {
+            background: #ffebee !important;
+            color: #e74c3c;
+            animation: shake 0.3s;
+        }
+
+        .cell.conflict {
+            background: #fff3cd !important;
+        }
+
+        .cell.highlighted {
+            background: #f0f0f0;
+        }
+
+        .cell.same-number {
+            background: #c8e6c9 !important;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .cell:nth-child(3n):not(:nth-child(9n)) {
+            border-right: 3px solid #2c3e50;
+        }
+
+        .cell:nth-child(9n) {
+            border-right: 1px solid #bdc3c7;
+        }
+
+        .cell:nth-child(n+19):nth-child(-n+27) {
+            border-bottom: 3px solid #2c3e50;
+        }
+
+        .cell:nth-child(n+46):nth-child(-n+54) {
+            border-bottom: 3px solid #2c3e50;
+        }
+
+        .cell:nth-child(n+73):nth-child(-n+81) {
+            border-bottom: 1px solid #bdc3c7;
+        }
+
+        .pencilmarks {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 100%;
+            height: 100%;
+            font-size: 10px;
+            color: #7f8c8d;
+            font-weight: normal;
+            padding: 2px;
+        }
+
+        .pencilmark {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pencilmark.conflict {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .input-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .number-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 0;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .number-btn {
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            font-weight: bold;
+            border: 1px solid #bdc3c7;
+            border-radius: 0;
+            background: white;
+            color: #667eea;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .number-btn:hover {
+            background: #e8f4f8;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .number-btn:nth-child(3n):not(:nth-child(9n)) {
+            border-right: 2px solid #667eea;
+        }
+
+        .number-btn:nth-child(n+4):nth-child(-n+6) {
+            border-bottom: 2px solid #667eea;
+        }
+
+        .mode-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .mode-btn {
+            padding: 10px 30px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .file-controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+                display: block !important;
+            }
+
+            .container {
+                box-shadow: none !important;
+                padding: 20px !important;
+                max-width: 100% !important;
+                background: white !important;
+            }
+
+            .difficulty-selector,
+            .controls,
+            .input-section,
+            .file-controls,
+            h1 {
+                display: none !important;
+            }
+
+            .grid-container {
+                margin: 0 auto !important;
+                display: block !important;
+                page-break-inside: avoid !important;
+            }
+
+            .sudoku-grid {
+                background: white !important;
+            }
+
+            .cell {
+                print-color-adjust: exact !important;
+                -webkit-print-color-adjust: exact !important;
+                background: white !important;
+                border-color: #000 !important;
+            }
+
+            .cell.user-input,
+            .cell.solved,
+            .cell.error,
+            .cell.conflict,
+            .cell.highlighted,
+            .cell.same-number {
+                color: black !important;
+                background: white !important;
+            }
+
+            .cell.selected {
+                background: white !important;
+                border: 1px solid #000 !important;
+            }
+
+            .pencilmarks {
+                display: none !important;
+            }
+
+            .modal {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .cell {
+                width: 38px;
+                height: 38px;
+                font-size: 18px;
+            }
+
+            .number-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
+            }
+            
+            .pencilmarks {
+                font-size: 8px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .container {
+                padding: 15px;
+            }
+
+            .input-section {
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Sudoku Master</h1>
+        
+        <div class="difficulty-selector">
+            <label for="difficulty">Difficulty:</label>
+            <select id="difficulty">
+                <option value="0">Very Easy</option>
+                <option value="1">Easy</option>
+                <option value="2" selected>Medium</option>
+                <option value="3">Hard</option>
+                <option value="4">Very Hard</option>
+                <option value="5">Expert</option>
+            </select>
+        </div>
+
+        <div class="controls">
+            <div class="info">
+                <div class="timer">⏱️ <span id="timer">00:00</span></div>
+                <div class="mistakes" id="mistakes-display">❌ <span id="mistakes">0</span></div>
+            </div>
+            <div class="buttons">
+                <button class="secondary" id="undoBtn">↶ Undo</button>
+                <button class="secondary" id="redoBtn">↷ Redo</button>
+                <button id="newGameBtn">New Game</button>
+                <button class="secondary" id="checkBtn">Check</button>
+                <button class="success" id="solveBtn">Solve</button>
+                <button class="secondary" id="printBtn">🖨️ Print</button>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <div class="grid-container">
+                <div class="sudoku-grid" id="grid"></div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="number-pad" id="numberPad"></div>
+            <div class="mode-controls">
+                <button class="mode-btn active" id="normalModeBtn">Normal</button>
+                <button class="mode-btn" id="pencilModeBtn">Pencil</button>
+                <button class="danger" id="clearBtn">Clear</button>
+            </div>
+        </div>
+
+        <div class="file-controls">
+            <button class="secondary" id="saveBtn">💾 Save Game</button>
+            <button class="secondary" id="loadBtn">📂 Load Game</button>
+        </div>
+    </div>
+
+    <div class="modal" id="winModal">
+        <div class="modal-content">
+            <h2>🎉 Congratulations!</h2>
+            <p>You solved the puzzle!</p>
+            <p><strong>Time:</strong> <span id="winTime"></span></p>
+            <p><strong>Mistakes:</strong> <span id="winMistakes"></span></p>
+            <button id="closeModalBtn">Close</button>
+            <button id="newGameModalBtn">New Game</button>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" style="display: none;" accept=".json">
+
+    <script>
+        let grid = Array(9).fill().map(() => Array(9).fill(0));
+        let solution = Array(9).fill().map(() => Array(9).fill(0));
+        let initialGrid = Array(9).fill().map(() => Array(9).fill(0));
+        let pencilmarks = Array(9).fill().map(() => Array(9).fill().map(() => new Set()));
+        let solvedCells = Array(9).fill().map(() => Array(9).fill(false));
+        let selectedCell = null;
+        let mode = 'normal';
+        let timer = 0;
+        let timerInterval = null;
+        let mistakes = 0;
+        let history = [];
+        let historyIndex = -1;
+
+        function initGrid() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            
+            for (let i = 0; i < 81; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                cell.addEventListener('click', () => selectCell(i));
+                cell.addEventListener('mouseenter', () => highlightRelated(i));
+                cell.addEventListener('mouseleave', () => removeHighlight());
+                gridEl.appendChild(cell);
+            }
+
+            createNumberPad();
+        }
+
+        function createNumberPad() {
+            const pad = document.getElementById('numberPad');
+            pad.innerHTML = '';
+            
+            for (let i = 1; i <= 9; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'number-btn';
+                btn.textContent = i;
+                const num = i;
+                btn.addEventListener('click', () => inputNumber(num));
+                pad.appendChild(btn);
+            }
+        }
+
+        function selectCell(index) {
+            const row = Math.floor(index / 9);
+            const col = index % 9;
+            
+            if (initialGrid[row][col] !== 0) return;
+            
+            selectedCell = index;
+            updateDisplay();
+        }
+
+        function setMode(newMode) {
+            mode = newMode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (newMode === 'normal') {
+                document.getElementById('normalModeBtn').classList.add('active');
+            } else {
+                document.getElementById('pencilModeBtn').classList.add('active');
+            }
+        }
+
+        function inputNumber(num) {
+            if (selectedCell === null) return;
+            
+            const row = Math.floor(selectedCell / 9);
+            const col = selectedCell % 9;
+            
+            if (initialGrid[row][col] !== 0) return;
+
+            saveState();
+
+            if (mode === 'normal') {
+                grid[row][col] = num;
+                pencilmarks[row][col].clear();
+                
+                if (solution[row][col] !== num) {
+                    mistakes++;
+                    updateMistakes();
+                }
+            } else {
+                if (pencilmarks[row][col].has(num)) {
+                    pencilmarks[row][col].delete(num);
+                } else {
+                    pencilmarks[row][col].add(num);
+                }
+            }
+
+            updateDisplay();
+            checkWin();
+        }
+
+        function clearCell() {
+            if (selectedCell === null) return;
+            
+            const row = Math.floor(selectedCell / 9);
+            const col = selectedCell % 9;
+            
+            if (initialGrid[row][col] !== 0) return;
+
+            saveState();
+            grid[row][col] = 0;
+            pencilmarks[row][col].clear();
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const cells = document.querySelectorAll('.cell');
+            const selectedValue = selectedCell !== null ? grid[Math.floor(selectedCell / 9)][selectedCell % 9] : null;
+            
+            cells.forEach((cell, index) => {
+                const row = Math.floor(index / 9);
+                const col = index % 9;
+                const value = grid[row][col];
+                
+                cell.className = 'cell';
+                
+                if (initialGrid[row][col] !== 0) {
+                    cell.classList.add('given');
+                } else if (value !== 0) {
+                    if (solvedCells[row][col]) {
+                        cell.classList.add('solved');
+                    } else {
+                        cell.classList.add('user-input');
+                    }
+                }
+                
+                if (index === selectedCell) {
+                    cell.classList.add('selected');
+                }
+                
+                if (value !== 0) {
+                    cell.innerHTML = value;
+                    
+                    if (initialGrid[row][col] === 0 && solution[row][col] !== value) {
+                        cell.classList.add('error');
+                    }
+                    
+                    if (hasConflict(row, col)) {
+                        cell.classList.add('conflict');
+                    }
+
+                    if (selectedValue && value === selectedValue && value !== 0) {
+                        cell.classList.add('same-number');
+                    }
+                } else if (pencilmarks[row][col].size > 0) {
+                    const pencilDiv = document.createElement('div');
+                    pencilDiv.className = 'pencilmarks';
+                    
+                    for (let n = 1; n <= 9; n++) {
+                        const mark = document.createElement('div');
+                        mark.className = 'pencilmark';
+                        if (pencilmarks[row][col].has(n)) {
+                            mark.textContent = n;
+                            if (hasPencilmarkConflict(row, col, n)) {
+                                mark.classList.add('conflict');
+                            }
+                        }
+                        pencilDiv.appendChild(mark);
+                    }
+                    
+                    cell.innerHTML = '';
+                    cell.appendChild(pencilDiv);
+                } else {
+                    cell.innerHTML = '';
+                }
+            });
+
+            saveToCookies();
+        }
+
+        function hasConflict(row, col) {
+            const value = grid[row][col];
+            if (value === 0) return false;
+
+            for (let i = 0; i < 9; i++) {
+                if (i !== col && grid[row][i] === value) return true;
+                if (i !== row && grid[i][col] === value) return true;
+            }
+
+            const boxRow = Math.floor(row / 3) * 3;
+            const boxCol = Math.floor(col / 3) * 3;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const r = boxRow + i;
+                    const c = boxCol + j;
+                    if ((r !== row || c !== col) && grid[r][c] === value) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        function hasPencilmarkConflict(row, col, num) {
+            for (let i = 0; i < 9; i++) {
+                if (i !== col && grid[row][i] === num) return true;
+                if (i !== row && grid[i][col] === num) return true;
+            }
+
+            const boxRow = Math.floor(row / 3) * 3;
+            const boxCol = Math.floor(col / 3) * 3;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const r = boxRow + i;
+                    const c = boxCol + j;
+                    if ((r !== row || c !== col) && grid[r][c] === num) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        function highlightRelated(index) {
+            const row = Math.floor(index / 9);
+            const col = index % 9;
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach((cell, i) => {
+                const r = Math.floor(i / 9);
+                const c = i % 9;
+                const boxRow = Math.floor(row / 3) * 3;
+                const boxCol = Math.floor(col / 3) * 3;
+                const cellBoxRow = Math.floor(r / 3) * 3;
+                const cellBoxCol = Math.floor(c / 3) * 3;
+                
+                if (r === row || c === col || (boxRow === cellBoxRow && boxCol === cellBoxCol)) {
+                    if (i !== index) {
+                        cell.classList.add('highlighted');
+                    }
+                }
+            });
+        }
+
+        function removeHighlight() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('highlighted');
+            });
+        }
+
+        function solveSudoku(board) {
+            const empty = findEmpty(board);
+            if (!empty) return true;
+            
+            const [row, col] = empty;
+            
+            for (let num = 1; num <= 9; num++) {
+                if (isValid(board, row, col, num)) {
+                    board[row][col] = num;
+                    
+                    if (solveSudoku(board)) return true;
+                    
+                    board[row][col] = 0;
+                }
+            }
+            
+            return false;
+        }
+
+        function findEmpty(board) {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (board[i][j] === 0) return [i, j];
+                }
+            }
+            return null;
+        }
+
+        function isValid(board, row, col, num) {
+            for (let i = 0; i < 9; i++) {
+                if (board[row][i] === num) return false;
+                if (board[i][col] === num) return false;
+            }
+            
+            const boxRow = Math.floor(row / 3) * 3;
+            const boxCol = Math.floor(col / 3) * 3;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (board[boxRow + i][boxCol + j] === num) return false;
+                }
+            }
+            
+            return true;
+        }
+
+        function countSolutions(board, limit = 2) {
+            let count = 0;
+            
+            function solve(b) {
+                if (count >= limit) return;
+                
+                const empty = findEmpty(b);
+                if (!empty) {
+                    count++;
+                    return;
+                }
+                
+                const [row, col] = empty;
+                const nums = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
+                
+                for (let num of nums) {
+                    if (isValid(b, row, col, num)) {
+                        b[row][col] = num;
+                        solve(b);
+                        b[row][col] = 0;
+                    }
+                }
+            }
+            
+            const boardCopy = board.map(row => [...row]);
+            solve(boardCopy);
+            return count;
+        }
+
+        function generatePuzzle(difficulty) {
+            const board = Array(9).fill().map(() => Array(9).fill(0));
+            
+            const nums = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < 9; i++) {
+                board[0][i] = nums[i];
+            }
+            
+            solveSudoku(board);
+            solution = board.map(row => [...row]);
+            
+            const cellsToRemove = [35, 40, 45, 50, 55, 60][difficulty];
+            let removed = 0;
+            const attempts = [];
+            
+            for (let i = 0; i < 81; i++) attempts.push(i);
+            attempts.sort(() => Math.random() - 0.5);
+            
+            for (let index of attempts) {
+                if (removed >= cellsToRemove) break;
+                
+                const row = Math.floor(index / 9);
+                const col = index % 9;
+                const backup = board[row][col];
+                
+                board[row][col] = 0;
+                
+                const solutions = countSolutions(board, 2);
+                
+                if (solutions === 1) {
+                    removed++;
+                } else {
+                    board[row][col] = backup;
+                }
+            }
+            
+            return board;
+        }
+
+        function newGame() {
+            const difficulty = parseInt(document.getElementById('difficulty').value);
+            const puzzle = generatePuzzle(difficulty);
+            
+            grid = puzzle.map(row => [...row]);
+            initialGrid = puzzle.map(row => [...row]);
+            pencilmarks = Array(9).fill().map(() => Array(9).fill().map(() => new Set()));
+            solvedCells = Array(9).fill().map(() => Array(9).fill(false));
+            
+            selectedCell = null;
+            mistakes = 0;
+            timer = 0;
+            history = [];
+            historyIndex = -1;
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timer++;
+                updateTimer();
+            }, 1000);
+            
+            updateTimer();
+            updateMistakes();
+            updateDisplay();
+        }
+
+        function updateTimer() {
+            const mins = Math.floor(timer / 60).toString().padStart(2, '0');
+            const secs = (timer % 60).toString().padStart(2, '0');
+            document.getElementById('timer').textContent = `${mins}:${secs}`;
+        }
+
+        function updateMistakes() {
+            document.getElementById('mistakes').textContent = mistakes;
+            const mistakesDisplay = document.getElementById('mistakes-display');
+            if (mistakes >= 5) {
+                mistakesDisplay.classList.add('high');
+            } else {
+                mistakesDisplay.classList.remove('high');
+            }
+        }
+
+        function checkSolution() {
+            let correct = true;
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (grid[i][j] !== solution[i][j]) {
+                        correct = false;
+                        break;
+                    }
+                }
+                if (!correct) break;
+            }
+            
+            if (correct) {
+                showWinModal();
+            } else {
+                alert('Not quite right yet! Keep trying.');
+            }
+        }
+
+        function checkWin() {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (grid[i][j] !== solution[i][j]) return;
+                }
+            }
+            showWinModal();
+        }
+
+        function showWinModal() {
+            clearInterval(timerInterval);
+            const mins = Math.floor(timer / 60).toString().padStart(2, '0');
+            const secs = (timer % 60).toString().padStart(2, '0');
+            document.getElementById('winTime').textContent = `${mins}:${secs}`;
+            document.getElementById('winMistakes').textContent = mistakes;
+            document.getElementById('winModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('winModal').classList.remove('show');
+        }
+
+        function solvePuzzle() {
+            if (confirm('Are you sure you want to see the solution? This will fill in all remaining cells.')) {
+                saveState();
+                
+                for (let i = 0; i < 9; i++) {
+                    for (let j = 0; j < 9; j++) {
+                        if (initialGrid[i][j] === 0 && grid[i][j] === 0) {
+                            grid[i][j] = solution[i][j];
+                            pencilmarks[i][j].clear();
+                            solvedCells[i][j] = true;
+                        }
+                    }
+                }
+                
+                updateDisplay();
+                clearInterval(timerInterval);
+            }
+        }
+
+        function printPuzzle() {
+            window.print();
+        }
+
+        function saveState() {
+            history = history.slice(0, historyIndex + 1);
+            history.push({
+                grid: grid.map(row => [...row]),
+                pencilmarks: pencilmarks.map(row => row.map(cell => new Set(cell))),
+                mistakes: mistakes
+            });
+            historyIndex++;
+        }
+
+        function undo() {
+            if (historyIndex >= 0) {
+                const state = history[historyIndex];
+                grid = state.grid.map(row => [...row]);
+                pencilmarks = state.pencilmarks.map(row => row.map(cell => new Set(cell)));
+                mistakes = state.mistakes;
+                historyIndex--;
+                updateDisplay();
+                updateMistakes();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                const state = history[historyIndex];
+                grid = state.grid.map(row => [...row]);
+                pencilmarks = state.pencilmarks.map(row => row.map(cell => new Set(cell)));
+                mistakes = state.mistakes;
+                updateDisplay();
+                updateMistakes();
+            }
+        }
+
+        function saveToCookies() {
+            const gameState = {
+                grid: grid,
+                solution: solution,
+                initialGrid: initialGrid,
+                pencilmarks: pencilmarks.map(row => row.map(cell => Array.from(cell))),
+                timer: timer,
+                mistakes: mistakes,
+                selectedCell: selectedCell
+            };
+            document.cookie = `sudokuState=${encodeURIComponent(JSON.stringify(gameState))}; max-age=31536000; path=/`;
+        }
+
+        function loadFromCookies() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'sudokuState') {
+                    try {
+                        const state = JSON.parse(decodeURIComponent(value));
+                        grid = state.grid;
+                        solution = state.solution;
+                        initialGrid = state.initialGrid;
+                        pencilmarks = state.pencilmarks.map(row => row.map(cell => new Set(cell)));
+                        timer = state.timer || 0;
+                        mistakes = state.mistakes || 0;
+                        selectedCell = state.selectedCell;
+                        
+                        clearInterval(timerInterval);
+                        timerInterval = setInterval(() => {
+                            timer++;
+                            updateTimer();
+                        }, 1000);
+                        
+                        updateTimer();
+                        updateMistakes();
+                        updateDisplay();
+                        return true;
+                    } catch (e) {
+                        console.error('Error loading from cookies:', e);
+                    }
+                }
+            }
+            return false;
+        }
+
+        function saveGame() {
+            const gameState = {
+                grid: grid,
+                solution: solution,
+                initialGrid: initialGrid,
+                pencilmarks: pencilmarks.map(row => row.map(cell => Array.from(cell))),
+                timer: timer,
+                mistakes: mistakes
+            };
+            
+            const dataStr = JSON.stringify(gameState, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `sudoku_${Date.now()}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadGame() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileLoad(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const state = JSON.parse(e.target.result);
+                    grid = state.grid;
+                    solution = state.solution;
+                    initialGrid = state.initialGrid;
+                    pencilmarks = state.pencilmarks.map(row => row.map(cell => new Set(cell)));
+                    timer = state.timer || 0;
+                    mistakes = state.mistakes || 0;
+                    selectedCell = null;
+                    
+                    clearInterval(timerInterval);
+                    timerInterval = setInterval(() => {
+                        timer++;
+                        updateTimer();
+                    }, 1000);
+                    
+                    updateTimer();
+                    updateMistakes();
+                    updateDisplay();
+                } catch (e) {
+                    alert('Error loading game file: ' + e.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (selectedCell === null) return;
+            
+            const key = e.key;
+            if (key >= '1' && key <= '9') {
+                inputNumber(parseInt(key));
+            } else if (key === 'Backspace' || key === 'Delete' || key === '0') {
+                clearCell();
+            } else if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
+                e.preventDefault();
+                const row = Math.floor(selectedCell / 9);
+                const col = selectedCell % 9;
+                let newRow = row;
+                let newCol = col;
+                
+                if (key === 'ArrowUp' && row > 0) newRow--;
+                else if (key === 'ArrowDown' && row < 8) newRow++;
+                else if (key === 'ArrowLeft' && col > 0) newCol--;
+                else if (key === 'ArrowRight' && col < 8) newCol++;
+                
+                selectCell(newRow * 9 + newCol);
+            }
+        });
+
+        document.getElementById('newGameBtn').addEventListener('click', newGame);
+        document.getElementById('checkBtn').addEventListener('click', checkSolution);
+        document.getElementById('solveBtn').addEventListener('click', solvePuzzle);
+        document.getElementById('printBtn').addEventListener('click', printPuzzle);
+        document.getElementById('normalModeBtn').addEventListener('click', () => setMode('normal'));
+        document.getElementById('pencilModeBtn').addEventListener('click', () => setMode('pencil'));
+        document.getElementById('undoBtn').addEventListener('click', undo);
+        document.getElementById('redoBtn').addEventListener('click', redo);
+        document.getElementById('clearBtn').addEventListener('click', clearCell);
+        document.getElementById('saveBtn').addEventListener('click', saveGame);
+        document.getElementById('loadBtn').addEventListener('click', loadGame);
+        document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+        document.getElementById('newGameModalBtn').addEventListener('click', () => {
+            closeModal();
+            newGame();
+        });
+        document.getElementById('fileInput').addEventListener('change', handleFileLoad);
+
+        initGrid();
+        if (!loadFromCookies()) {
+            newGame();
+        }
+    </script>
+</body>
+</html>
